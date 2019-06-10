@@ -2,6 +2,7 @@ import json
 import logging
 from types import *
 
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -31,14 +32,22 @@ class mqttClient():
  
     @property
     def config(self):
-        return {
-            'name': self.name,
-            'state_topic': self.state_topic,
-            'command_topic': self.command_topic,
-            'payload_on': self.payload_on,
-            'payload_off': self.payload_off,
-            'retain': self.retain
-        }
+        if  self.device_type == 'switch':
+            return {
+                'name': self.name,
+                'state_topic': self.state_topic,
+                'command_topic': self.command_topic,
+                'payload_on': self.payload_on,
+                'payload_off': self.payload_off,
+                'retain': self.retain
+            }
+        else:
+            return {
+                'name': self.name,
+                'unit_of_measurement': 'W',
+                # 'retain': self.retain
+                }
+        
 
 
     def _on_command(self, client, userdata, message):
@@ -75,7 +84,7 @@ class mqttClient():
 
         self._state = value
         logger.debug("Publishing new state {}".format(value))
-        self.client.publish(self.state_topic, value, retain=self.retain)
+        #self.client.publish(self.state_topic, value, retain=self.retain)
     
     @property
     def base_topic(self):
@@ -109,6 +118,7 @@ class mqttClient():
         """
         Payload to use to indicate the switch is off. Defaults to ``"OFF"``
         """
+        
         return "OFF"
 
     @property
