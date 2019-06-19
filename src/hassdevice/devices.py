@@ -26,9 +26,14 @@ class mqttClient():
         if self.device_type == 'switch':
             self.client.message_callback_add(self.command_topic, self._on_command)
             self.client.subscribe(self.command_topic)
+            self.client.publish(self.config_topic, json.dumps(self.config), retain=self.retain)
+        else:
+            self.client.publish(self.config_topic, json.dumps(self.config), retain=self.retain)
 
-        self.client.publish(self.config_topic, json.dumps(self.config), retain=self.retain)
+            
+        
         logger.debug("Connected to broker, sent config to {}".format(self.config_topic))
+        logger.debug("GOT DEVICE TYPE: {}".format(self.device_type))
  
     @property
     def config(self):
@@ -44,8 +49,7 @@ class mqttClient():
         else:
             return {
                 'name': self.name,
-                'unit_of_measurement': 'W',
-                # 'retain': self.retain
+                'unit_of_measurement': 'W'
                 }
         
 
@@ -84,7 +88,7 @@ class mqttClient():
 
         self._state = value
         logger.debug("Publishing new state {}".format(value))
-        #self.client.publish(self.state_topic, value, retain=self.retain)
+        self.client.publish(self.state_topic, value, retain=self.retain)
     
     @property
     def base_topic(self):
@@ -148,6 +152,8 @@ class Switch(mqttClient):
         self.discovery_prefix = None
         self.device_type = "switch"
         self._state = None
+        logger.debug("SET DEVICE TYPE: SWITCH")
+
 
 class Sensor(mqttClient):
    """
@@ -168,7 +174,8 @@ class Sensor(mqttClient):
         self.discovery_prefix = None
         self.device_type = "sensor"
         self._state = None
-   
+        logger.debug("SET DEVICE TYPE: SENSOR")
+
 
    def payload_energy_update(self, energy):
         """
