@@ -2,7 +2,6 @@ import json
 import logging
 from types import *
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -26,32 +25,20 @@ class mqttClient():
         if self.device_type == 'switch':
             self.client.message_callback_add(self.command_topic, self._on_command)
             self.client.subscribe(self.command_topic)
-            self.client.publish(self.config_topic, json.dumps(self.config), retain=self.retain)
-        else:
-            self.client.publish(self.config_topic, json.dumps(self.config), retain=self.retain)
 
-            
-        
+        self.client.publish(self.config_topic, json.dumps(self.config), retain=self.retain)
         logger.debug("Connected to broker, sent config to {}".format(self.config_topic))
-        logger.debug("GOT DEVICE TYPE: {}".format(self.device_type))
  
     @property
     def config(self):
-        if  self.device_type == 'switch':
-            return {
-                'name': self.name,
-                'state_topic': self.state_topic,
-                'command_topic': self.command_topic,
-                'payload_on': self.payload_on,
-                'payload_off': self.payload_off,
-                'retain': self.retain
-            }
-        else:
-            return {
-                'name': self.name,
-                'unit_of_measurement': 'W'
-                }
-        
+        return {
+            'name': self.name,
+            'state_topic': self.state_topic,
+            'command_topic': self.command_topic,
+            'payload_on': self.payload_on,
+            'payload_off': self.payload_off,
+            'retain': self.retain
+        }
 
 
     def _on_command(self, client, userdata, message):
@@ -122,7 +109,6 @@ class mqttClient():
         """
         Payload to use to indicate the switch is off. Defaults to ``"OFF"``
         """
-        
         return "OFF"
 
     @property
@@ -152,8 +138,6 @@ class Switch(mqttClient):
         self.discovery_prefix = None
         self.device_type = "switch"
         self._state = None
-        logger.debug("SET DEVICE TYPE: SWITCH")
-
 
 class Sensor(mqttClient):
    """
@@ -174,8 +158,7 @@ class Sensor(mqttClient):
         self.discovery_prefix = None
         self.device_type = "sensor"
         self._state = None
-        logger.debug("SET DEVICE TYPE: SENSOR")
-
+   
 
    def payload_energy_update(self, energy):
         """
