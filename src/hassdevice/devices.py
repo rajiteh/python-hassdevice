@@ -1,39 +1,16 @@
 import json
 import logging
+from types import *
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class Switch():
-    """
-    An MQTT switch
-    """
 
-    def __init__(self, name, entity_id):
-        """
-        :param name: The display name to use in HomeAssistant
-        :param entity_id: The entity_id to use in HomeAssistant
-        """
-        self.name = name
-        self.entity_id = entity_id
-
-        self.discovery_prefix = None
-        self.node_id = None
-        self.client = None
-
-        self._state = None
-
-    @property
-    def config(self):
-        return {
-            'name': self.name,
-            'state_topic': self.state_topic,
-            'command_topic': self.command_topic,
-            'payload_on': self.payload_on,
-            'payload_off': self.payload_off,
-            'retain': self.retain
-        }
+class mqttClient():
+    def device_type(self, device_type):
+        self.device_type = device_type
 
     def connect(self, mqtt_client, discovery_prefix="homeassistant", node_id=None):
         """
@@ -46,12 +23,32 @@ class Switch():
         self.discovery_prefix = discovery_prefix
         self.node_id = node_id
         self.client = mqtt_client
-
-        self.client.message_callback_add(self.command_topic, self._on_command)
-        self.client.subscribe(self.command_topic)
+        if self.device_type == 'switch':
+            self.client.message_callback_add(self.command_topic, self._on_command)
+            self.client.subscribe(self.command_topic)
 
         self.client.publish(self.config_topic, json.dumps(self.config), retain=self.retain)
         logger.debug("Connected to broker, sent config to {}".format(self.config_topic))
+ 
+    @property
+    def config(self):
+        if  self.device_type == 'switch':
+            return {
+                'name': self.name,
+                'state_topic': self.state_topic,
+                'command_topic': self.command_topic,
+                'payload_on': self.payload_on,
+                'payload_off': self.payload_off,
+                'retain': self.retain
+            }
+        else:
+            return {
+                'name': self.name,
+                'unit_of_measurement': 'W',
+                # 'retain': self.retain
+                }
+        
+
 
     def _on_command(self, client, userdata, message):
         new_state = message.payload.decode('utf-8')
@@ -87,14 +84,14 @@ class Switch():
 
         self._state = value
         logger.debug("Publishing new state {}".format(value))
-        self.client.publish(self.state_topic, value, retain=self.retain)
-
+        #self.client.publish(self.state_topic, value, retain=self.retain)
+    
     @property
     def base_topic(self):
         if self.discovery_prefix is None:
             raise ValueError("Must call .connect() first")
 
-        path = filter(lambda x: x is not None, [self.discovery_prefix, "switch", self.node_id, self.entity_id])
+        path = filter(lambda x: x is not None, [self.discovery_prefix, self.device_type, self.node_id, self.entity_id])
         return "/".join(path)
 
     @property
@@ -121,6 +118,7 @@ class Switch():
         """
         Payload to use to indicate the switch is off. Defaults to ``"OFF"``
         """
+        
         return "OFF"
 
     @property
@@ -129,3 +127,51 @@ class Switch():
         Should the messages sent to the broker have the 'retain' flag set. Defaults to ``True``
         """
         return True
+
+    
+
+class Switch(mqttClient):
+    """
+    An MQTT switch
+    """
+
+    def __init__(self, name, entity_id):
+        """
+        :param name: The display name to use in HomeAssistant
+        :param entity_id: The entity_id to use in HomeAssistant
+        """
+        self.name = name
+        self.entity_id = entity_id
+
+        self.node_id = None
+        self.client = None
+        self.discovery_prefix = None
+        self.device_type = "switch"
+        self._state = None
+
+class Sensor(mqttClient):
+   """
+   An MQTT sensor
+   """
+   pass
+
+   def __init__(self, name, entity_id):
+        """
+        :param name: The display name to use in HomeAssistant
+        :param entity_id: The entity_id to use in HomeAssistant
+        """
+        self.name = name
+        self.entity_id = entity_id
+
+        self.node_id = None
+        self.client = None
+        self.discovery_prefix = None
+        self.device_type = "sensor"
+        self._state = None
+   
+
+   def payload_energy_update(self, energy):
+        """
+        Payload to use to send energy updates.
+        """
+        self.client.publish(self.state_topic, energy, retain=self.retain)
